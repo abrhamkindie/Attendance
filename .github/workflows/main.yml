@@ -21,12 +21,34 @@ jobs:
           extensions: mbstring, bcmath, ctype, fileinfo, json, openssl, pdo, tokenizer, xml, curl, zip
           tools: composer
 
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
       - name: Copy .env
         run: |
           php -r "file_exists('.env') || copy('.env.example', '.env');"
 
       - name: Install Dependencies
-        run: composer install --no-dev --optimize-autoloader --ignore-platform-reqs
+        run: composer install --no-dev --optimize-autoloader --ignore-platform-reqs --no-interaction
+
+      # Vite compiles resources/css + resources/js into public/build (manifest.json + hashed assets).
+      # public/build is gitignored, so it MUST be built here or the server gets a
+      # "Vite manifest not found at .../public/build/manifest.json" 500 error.
+      - name: Build frontend assets
+        run: |
+          npm ci --no-audit --no-fund
+          npm run build
+
+      - name: Verify Vite manifest exists
+        run: |
+          if [ ! -f public/build/manifest.json ]; then
+            echo "::error::public/build/manifest.json missing - frontend build did not run"
+            exit 1
+          fi
+          ls -la public/build public/build/assets
 
       - name: Generate key
         run: php artisan key:generate --force
@@ -46,3 +68,22 @@ jobs:
           port: 21
           server-dir: /
           state-name: .ftp-deploy-sync-state.json
+          # NOTE: excluded patterns are skipped in BOTH the upload and the delete pass,
+          # so this also stops a deploy from wiping server-only runtime files.
+          # public/build is intentionally NOT excluded - it must be uploaded.
+          exclude: |
+            **/.git*
+            **/.git*/**
+            **/node_modules/**
+            .env
+            .env.*
+            .github/**
+            **/.github/**
+            tests/**
+            **/tests/**
+            storage/logs/**
+            **/storage/logs/**
+            storage/framework/**
+            **/storage/framework/**
+            storage/app/**
+            **/storage/app/**

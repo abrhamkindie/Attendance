@@ -13,7 +13,11 @@
     <link href="https://fonts.bunny.net/css?family=figtree:400,500,600,700&display=swap" rel="stylesheet" />
 
     <!-- Scripts -->
-    @vite(['resources/css/app.css', 'resources/js/app.js'])
+    {{-- Guarded so a missing Vite build degrades to an unstyled page instead of throwing
+         ViteManifestNotFoundException (500). Fix: run `npm run build` and upload public/build. --}}
+    @if (file_exists(public_path('hot')) || file_exists(public_path('build/manifest.json')))
+        @vite(['resources/css/app.css', 'resources/js/app.js'])
+    @endif
 </head>
 
 <body class="font-sans text-gray-900 antialiased">

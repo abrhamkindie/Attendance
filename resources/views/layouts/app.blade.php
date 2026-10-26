@@ -16,7 +16,11 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.css" />
 
     <!-- Scripts -->
-    @vite(['resources/css/app.css', 'resources/js/app.js'])
+    {{-- Guarded so a missing Vite build degrades to an unstyled page instead of throwing
+         ViteManifestNotFoundException (500). Fix: run `npm run build` and upload public/build. --}}
+    @if (file_exists(public_path('hot')) || file_exists(public_path('build/manifest.json')))
+        @vite(['resources/css/app.css', 'resources/js/app.js'])
+    @endif
 
     @stack('styles')
 </head>
